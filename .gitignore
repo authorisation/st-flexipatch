@@ -1,4 +1,4 @@
 *.o
-config.h
-patches.h
+patches.def.h
+config.def.h
 st
