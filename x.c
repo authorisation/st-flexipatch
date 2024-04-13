@@ -2860,6 +2860,9 @@ xseticontitle(char *p)
 	XTextProperty prop;
 	DEFAULT(p, opt_title);
 
+	if (p[0] == '\0')
+		p = opt_title;
+
 	if (Xutf8TextListToTextProperty(xw.dpy, &p, 1, XUTF8StringStyle,
 			&prop) != Success)
 		return;
@@ -2879,7 +2882,7 @@ xsettitle(char *p, int pop)
 		titlestack[tstki] = NULL;
 		tstki = (tstki - 1 + TITLESTACKSIZE) % TITLESTACKSIZE;
 		p = titlestack[tstki] ? titlestack[tstki] : opt_title;
-	} else if (p) {
+	} else if (p && p[0] != '\0') {
 		titlestack[tstki] = xstrdup(p);
 	} else {
 		titlestack[tstki] = NULL;
@@ -2918,6 +2921,9 @@ xsettitle(char *p)
 {
 	XTextProperty prop;
 	DEFAULT(p, opt_title);
+
+	if (p[0] == '\0')
+		p = opt_title;
 
 	if (Xutf8TextListToTextProperty(xw.dpy, &p, 1, XUTF8StringStyle,
 			&prop) != Success)
@@ -3145,8 +3151,8 @@ xfinishdraw(void)
 			continue;
 
 		/* scale the image */
-		width = im->width * win.cw / im->cw;
-		height = im->height * win.ch / im->ch;
+		width = MAX(im->width * win.cw / im->cw, 1);
+		height = MAX(im->height * win.ch / im->ch, 1);
 		if (!im->pixmap) {
 			im->pixmap = (void *)XCreatePixmap(xw.dpy, xw.win, width, height,
 				#if ALPHA_PATCH
