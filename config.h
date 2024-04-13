@@ -5,7 +5,7 @@
  *
  * font: see http://freedesktop.org/software/fontconfig/fontconfig-user.html
  */
-static char *font = "Source Code Pro:style=SemiBold:pixelsize=15:antialias=true:autohint=true";
+static char *font = "NotoSansMono:style=Bold:pixelsize=13.2";
 #if FONT2_PATCH
 /* Spare fonts */
 static char *font2[] = {
@@ -46,7 +46,7 @@ static char *url_opener = "xdg-open";
  * 4: value of shell in /etc/passwd
  * 5: value of shell in config.h
  */
-static char *shell = "/bin/zsh";
+static char *shell = "/usr/bin/sh";
 char *utmp = NULL;
 /* scroll program: to enable use a string like "scroll" */
 char *scroll = NULL;
@@ -174,28 +174,31 @@ float alphaUnfocused = 0.7;
 static const char *colorname[] = {
 
   /* 8 normal colors */
-  [0] = "#15161E", /* black   */
-  [1] = "#f7768e", /* red     */
-  [2] = "#9ece6a", /* green   */
-  [3] = "#e0af68", /* yellow  */
-  [4] = "#7aa2f7", /* blue    */
-  [5] = "#bb9af7", /* magenta */
-  [6] = "#7dcfff", /* cyan    */
-  [7] = "#a9b1d6", /* white   */
+  [0] = "#050505", /* black   */
+  [1] = "#e9897c", /* red     */
+  [2] = "#b6377d", /* green   */
+  [3] = "#ecebbe", /* yellow  */
+  [4] = "#a9cdeb", /* blue    */
+  [5] = "#75507b", /* magenta */
+  [6] = "#c9caec", /* cyan    */
+  [7] = "#f2f2f2", /* white   */
 
   /* 8 bright colors */
-  [8]  = "#414868", /* black   */
-  [9]  = "#f7768e", /* red     */
-  [10] = "#9ece6a", /* green   */
-  [11] = "#e0af68", /* yellow  */
-  [12] = "#7aa2f7", /* blue    */
-  [13] = "#bb6af7", /* magenta */
-  [14] = "#7dcfff", /* cyan    */
-  [15] = "#c0caf5", /* white   */
+  [8]  = "#141414", /* black   */
+  [9]  = "#f99286", /* red     */
+  [10] = "#c3f786", /* green   */
+  [11] = "#fcfbcc", /* yellow  */
+  [12] = "#b6defb", /* blue    */
+  [13] = "#ad7fa8", /* magenta */
+  [14] = "#d7d9fc", /* cyan    */
+  [15] = "#e2e2e2", /* white   */
 
   /* special colors */
-  [256] = "#1a1b26", /* background */
-  [257] = "#c0caf5", /* foreground */
+  [256] = "#141414", /* background */
+  [257] = "#FFFFFF", /* foreground */
+  [258] = "#a5a5a5", /* selection background */
+  [259] = "#1a1a1a", /* selection foreground */
+  [260] = "#EECCFB", /* cursor */
 };
 
 
@@ -234,7 +237,7 @@ static int ignoreselfg = 1;
  * 7: Blinking st cursor
  * 8: Steady st cursor
  */
-static unsigned int cursorstyle = 0;
+static unsigned int cursorstyle = 5;
 static Rune stcursor = 0x2603; /* snowman (U+2603) */
 #else
 /*
@@ -264,8 +267,8 @@ static char* mouseshape = "xterm";
  * Default colour and shape of the mouse cursor
  */
 static unsigned int mouseshape = XC_xterm;
-static unsigned int mousefg = 7;
-static unsigned int mousebg = 0;
+static unsigned int mousefg = 260;
+static unsigned int mousebg = 256;
 #endif // THEMED_CURSOR_PATCH
 
 /*
@@ -298,7 +301,7 @@ ResourcePref resources[] = {
 		{ "color15",      STRING,  &colorname[15] },
 		{ "background",   STRING,  &colorname[258] },
 		{ "foreground",   STRING,  &colorname[259] },
-		{ "cursorColor",  STRING,  &colorname[256] },
+		{ "cursorColor",  STRING,  &colorname[260] },
 		{ "termname",     STRING,  &termname },
 		{ "shell",        STRING,  &shell },
 		{ "minlatency",   INTEGER, &minlatency },
