@@ -213,7 +213,7 @@ unsigned int bg = 256, bgUnfocused = 256;
 unsigned int defaultbg = 256;
 #endif // ALPHA_FOCUS_HIGHLIGHT_PATCH
 unsigned int defaultfg = 257;
-unsigned int defaultcs = 257;
+unsigned int defaultcs = 260;
 unsigned int defaultrcs = 13;
 #if SELECTION_COLORS_PATCH
 unsigned int selectionfg = 257;
