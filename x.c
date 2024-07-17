@@ -318,6 +318,7 @@ void
 zoomabs(const Arg *arg)
 {
 	#if SIXEL_PATCH
+	int i;
 	ImageList *im;
 	#endif // SIXEL_PATCH
 
@@ -328,14 +329,23 @@ zoomabs(const Arg *arg)
 	#endif // FONT2_PATCH
 
 	#if SIXEL_PATCH
-	/* deleting old pixmaps forces the new scaled pixmaps to be created */
-	for (im = term.images; im; im = im->next) {
+	
+	/* delete old pixmaps so that xfinishdraw() can create new scaled ones */
+	for (im = term.images, i = 0; i < 2; i++, im = term.images_alt) {
 		if (im->pixmap)
+		for (; im; im = im->next) {
 			XFreePixmap(xw.dpy, (Drawable)im->pixmap);
+			if (im->pixmap)
 		if (im->clipmask)
+				XFreePixmap(xw.dpy, (Drawable)im->pixmap);
 			XFreePixmap(xw.dpy, (Drawable)im->clipmask);
+			if (im->clipmask)
 		im->pixmap = NULL;
+				XFreePixmap(xw.dpy, (Drawable)im->clipmask);
 		im->clipmask = NULL;
+			im->pixmap = NULL;
+			im->clipmask = NULL;
+		}
 	}
 	#endif // SIXEL_PATCH
 
@@ -3164,9 +3174,14 @@ xfinishdraw(void)
 	ImageList *im, *next;
 	Imlib_Image origin, scaled;
 	XGCValues gcvalues;
-	GC gc;
+	GC gc = NULL;
 	int width, height;
-	int x, x2, del, destx, desty;
+	int del, desty, mode, x1, x2, xend;
+	#if ANYSIZE_PATCH
+	int bw = win.hborderpx, bh = win.vborderpx;
+	#else
+	int bw = borderpx, bh = borderpx;
+	#endif // ANYSIZE_PATCH
 	Line line;
 	#endif // SIXEL_PATCH
 
@@ -3177,6 +3192,12 @@ xfinishdraw(void)
 		/* do not draw or process the image, if it is not visible */
 		if (im->x >= term.col || im->y >= term.row || im->y < 0)
 			continue;
+
+		#if KEYBOARDSELECT_PATCH && REFLOW_PATCH
+		/* do not draw the image on the search bar */
+		if (im->y == term.row-1 && IS_SET(MODE_KBDSELECT) && kbds_issearchmode())
+			continue;
+		#endif // KEYBOARDSELECT_PATCH
 
 		/* scale the image */
 		width = MAX(im->width * win.cw / im->cw, 1);
@@ -3251,43 +3272,50 @@ xfinishdraw(void)
 			}
 		}
 
-		/* clip the image so it does not go over to borders */
-		x2 = MIN(im->x + im->cols, term.col);
-		width = MIN(width, (x2 - im->x) * win.cw);
-
-		/* delete the image if the text cells behind it have been changed */
-		#if SCROLLBACK_PATCH || REFLOW_PATCH
-		line = TLINE(im->y);
-		#else
-		line = term.line[im->y];
-		#endif // SCROLLBACK_PATCH | REFLOW_PATCH
-		for (del = 0, x = im->x; x < x2; x++) {
-			if ((del = !(line[x].mode & ATTR_SIXEL)))
-				break;
-		}
-		if (del) {
-			delete_image(im);
-			continue;
+		/* create GC */
+		if (!gc) {
+			memset(&gcvalues, 0, sizeof(gcvalues));
+			gcvalues.graphics_exposures = False;
+			gc = XCreateGC(xw.dpy, xw.win, GCGraphicsExposures, &gcvalues);
 		}
 
-		/* draw the image */
-		memset(&gcvalues, 0, sizeof(gcvalues));
-		gcvalues.graphics_exposures = False;
-		gc = XCreateGC(xw.dpy, xw.win, GCGraphicsExposures, &gcvalues);
-		#if ANYSIZE_PATCH
-		destx = win.hborderpx + im->x * win.cw;
-		desty = win.vborderpx + im->y * win.ch;
-		#else
-		destx = borderpx + im->x * win.cw;
-		desty = borderpx + im->y * win.ch;
-		#endif // ANYSIZE_PATCH
+		/* set the clip mask */
+		desty = bh + im->y * win.ch;
 		if (im->clipmask) {
 			XSetClipMask(xw.dpy, gc, (Drawable)im->clipmask);
-			XSetClipOrigin(xw.dpy, gc, destx, desty);
+			XSetClipOrigin(xw.dpy, gc, bw + im->x * win.cw, desty);
 		}
-		XCopyArea(xw.dpy, (Drawable)im->pixmap, xw.buf, gc, 0, 0, width, height, destx, desty);
-		XFreeGC(xw.dpy, gc);
+
+		/* draw only the parts of the image that are not erased */
+		#if SCROLLBACK_PATCH || REFLOW_PATCH
+		line = TLINE(im->y) + im->x;
+		#else
+		line = term.line[im->y] + im->x;
+		#endif // SCROLLBACK_PATCH || REFLOW_PATCH
+		xend = MIN(im->x + im->cols, term.col);
+		for (del = 1, x1 = im->x; x1 < xend; x1 = x2) {
+			mode = line->mode & ATTR_SIXEL;
+			for (x2 = x1 + 1; x2 < xend; x2++) {
+				if (((++line)->mode & ATTR_SIXEL) != mode)
+					break;
+			}
+			if (mode) {
+				XCopyArea(xw.dpy, (Drawable)im->pixmap, xw.buf, gc,
+				    (x1 - im->x) * win.cw, 0,
+				    MIN((x2 - x1) * win.cw, width - (x1 - im->x) * win.cw), height,
+				    bw + x1 * win.cw, desty);
+				del = 0;
+			}
+		}
+		if (im->clipmask)
+			XSetClipMask(xw.dpy, gc, None);
+
+		/* if all the parts are erased, we can delete the entire image */
+		if (del && im->x + im->cols <= term.col)
+			delete_image(im);
 	}
+	if (gc)
+		XFreeGC(xw.dpy, gc);
 	#endif // SIXEL_PATCH
 
 	#if !SINGLE_DRAWABLE_BUFFER_PATCH
